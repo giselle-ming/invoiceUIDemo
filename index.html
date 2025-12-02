@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoices Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  </head>
+
+  <body class="bg-gray-100 min-h-screen">
+    <!-- TOP NAV -->
+    <header class="bg-white shadow p-4 flex justify-between items-center">
+      <h1 class="text-xl font-bold text-gray-800">Invoice Dashboard</h1>
+      <button
+        id="openFormBtn"
+        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+      >
+        + Add Invoice
+      </button>
+    </header>
+
+    <!-- INVOICE LIST -->
+    <main class="p-6">
+      <div
+        id="invoiceContainer"
+        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+      ></div>
+    </main>
+
+    <!-- ADD INVOICE FORM (MODAL) -->
+    <div
+      id="invoiceModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4"
+    >
+      <div
+        class="bg-white p-6 rounded-lg w-full max-w-2xl shadow-lg max-h-[90vh] flex flex-col"
+      >
+        <h2 class="text-lg font-bold mb-4">Add Invoice</h2>
+
+        <form
+          id="invoiceForm"
+          class="space-y-3 overflow-y-auto flex-1 pr-2 scrollbar-hide"
+        >
+          <!-- Invoice Info -->
+          <div>
+            <label class="block text-sm">Invoice Number</label>
+            <input
+              name="invoiceNumber"
+              class="w-full border rounded p-2"
+              required
+            />
+          </div>
+          <div>
+            <label class="block text-sm">Invoice Date</label>
+            <input
+              type="date"
+              name="invoiceDate"
+              class="w-full border rounded p-2"
+              required
+            />
+          </div>
+          <div>
+            <label class="block text-sm">Customer PO Number</label>
+            <input
+              name="customerPurchaseOrderNumber"
+              class="w-full border rounded p-2"
+            />
+          </div>
+
+          <!-- Vendor Info -->
+          <div>
+            <label class="block text-sm">Vendor Name</label>
+            <input name="vendorName" class="w-full border rounded p-2" />
+          </div>
+          <div>
+            <label class="block text-sm">Vendor Address</label>
+            <input name="vendorAddress" class="w-full border rounded p-2" />
+          </div>
+          <div>
+            <label class="block text-sm">Vendor Email</label>
+            <input
+              type="email"
+              name="vendorEmail"
+              class="w-full border rounded p-2"
+            />
+          </div>
+
+          <!-- Billing Info -->
+          <div>
+            <label class="block text-sm">Billing Name</label>
+            <input name="billingName" class="w-full border rounded p-2" />
+          </div>
+          <div>
+            <label class="block text-sm">Billing Address</label>
+            <input name="billingAddress" class="w-full border rounded p-2" />
+          </div>
+
+          <!-- Payment Info -->
+          <div>
+            <label class="block text-sm">Payment Terms</label>
+            <input name="paymentTerms" class="w-full border rounded p-2" />
+          </div>
+          <div>
+            <label class="block text-sm">Payment Address</label>
+            <input name="paymentAddress" class="w-full border rounded p-2" />
+          </div>
+
+          <!-- Bank Info -->
+          <div>
+            <label class="block text-sm">Bank Name</label>
+            <input name="bankName" class="w-full border rounded p-2" />
+          </div>
+          <div>
+            <label class="block text-sm">Bank Account Number</label>
+            <input name="bankAccountNumber" class="w-full border rounded p-2" />
+          </div>
+
+          <!-- Tax / Totals -->
+          <div>
+            <label class="block text-sm">Currency</label>
+            <input
+              name="currency"
+              class="w-full border rounded p-2"
+              value="USD"
+            />
+          </div>
+          <div>
+            <label class="block text-sm">Tax Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              name="taxAmount"
+              class="w-full border rounded p-2"
+            />
+          </div>
+          <div>
+            <label class="block text-sm">Discount</label>
+            <input
+              type="number"
+              step="0.01"
+              name="discount"
+              class="w-full border rounded p-2"
+            />
+          </div>
+          <div>
+            <label class="block text-sm">Net Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              name="netAmount"
+              class="w-full border rounded p-2"
+            />
+          </div>
+          <div>
+            <label class="block text-sm">Total Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              name="totalAmount"
+              class="w-full border rounded p-2"
+            />
+          </div>
+
+          <!-- Items (simplified: one textarea for JSON input) -->
+          <div>
+            <label class="block text-sm">Items</label>
+            <textarea
+              name="items"
+              class="w-full border rounded p-2"
+              rows="5"
+              placeholder=""
+            ></textarea>
+          </div>
+
+          <div class="flex justify-end gap-3 mt-4">
+            <button
+              type="button"
+              id="cancelFormBtn"
+              class="px-3 py-2 bg-gray-300 rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-3 py-2 bg-blue-600 text-white rounded"
+            >
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MAIN SCRIPT -->
+    <script>
+      const API_URL = "https://invoicesapi-deju.onrender.com/invoices";
+      const container = document.getElementById("invoiceContainer");
+
+      // Helper to only render if value is not "Not extracted"
+      function renderIfNotExtracted(label, value) {
+        if (!value || value === "Not extracted") return "";
+        return `<p><strong>${label}:</strong> ${value}</p>`;
+      }
+
+      async function loadInvoices() {
+        container.innerHTML = "<p class='text-gray-600'>Loading...</p>";
+        const res = await fetch(API_URL);
+        const invoices = await res.json();
+
+        container.innerHTML = "";
+
+        invoices.forEach((inv) => {
+          const card = document.createElement("div");
+          card.className =
+            "bg-white p-4 rounded-lg shadow hover:shadow-lg transition cursor-pointer";
+
+          card.innerHTML = `
+      <div class="flex justify-between items-start">
+        <div>
+          ${
+            inv.vendor.name && inv.vendor.name !== "Not extracted"
+              ? `<h3 class="font-bold text-lg text-gray-800">${inv.vendor.name}</h3>`
+              : ""
+          }
+          ${
+            inv.vendor.address && inv.vendor.address !== "Not extracted"
+              ? `<p class="text-sm text-gray-500">${inv.vendor.address}</p>`
+              : ""
+          }
+        </div>
+        ${
+          inv.invoice.total_amount &&
+          inv.invoice.total_amount !== "Not extracted"
+            ? `<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">${inv.invoice.currency} ${inv.invoice.total_amount}</span>`
+            : ""
+        }
+      </div>
+
+      <div class="mt-3 space-y-1 text-sm text-gray-700">
+        ${renderIfNotExtracted("Invoice #", inv.invoice.number)}
+        ${renderIfNotExtracted("Date", inv.invoice.date)}
+        ${renderIfNotExtracted("Billing", inv.billing.address)}
+        ${renderIfNotExtracted("Shipping", inv.shipping.address)}
+        ${renderIfNotExtracted(
+          "PO Number",
+          inv.invoice.customer_purchase_order_number
+        )}
+        ${renderIfNotExtracted("Payment", inv.invoice.payment_terms)}
+      </div>
+
+      <button class="mt-4 text-blue-600 underline text-sm"
+        onclick="toggleItems('${inv.id}')">
+        View items
+      </button>
+
+      <div id="${inv.id}" class="hidden mt-3 border-t pt-3 space-y-3">
+        ${inv.items
+          .map(
+            (item) => `
+          <div class="p-2 bg-gray-50 rounded border">
+            ${
+              item.description && item.description !== "Not extracted"
+                ? `<p class="font-medium">${item.description}</p>`
+                : ""
+            }
+            ${
+              item.part_number && item.part_number !== "Not extracted"
+                ? `<p class="text-xs text-gray-600">Part: ${item.part_number}</p>`
+                : ""
+            }
+            <div class="flex justify-between text-sm mt-1">
+              ${
+                item.quantity && item.quantity !== "Not extracted"
+                  ? `<span>Qty: ${item.quantity}</span>`
+                  : ""
+              }
+              ${
+                item.unit_price && item.unit_price !== "Not extracted"
+                  ? `<span>Unit: ${item.unit_price}</span>`
+                  : ""
+              }
+              ${
+                item.line_amount && item.line_amount !== "Not extracted"
+                  ? `<span class="font-semibold">Ammount: $${item.line_amount}</span>`
+                  : ""
+              }
+            </div>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+      `;
+
+          container.appendChild(card);
+        });
+      }
+
+      function toggleItems(id) {
+        const el = document.getElementById(id);
+        el.classList.toggle("hidden");
+      }
+
+      loadInvoices();
+
+      /* FORM MODAL LOGIC */
+      const modal = document.getElementById("invoiceModal");
+      document.getElementById("openFormBtn").onclick = () =>
+        modal.classList.remove("hidden");
+      document.getElementById("cancelFormBtn").onclick = () =>
+        modal.classList.add("hidden");
+
+      document.getElementById("invoiceForm").onsubmit = async (e) => {
+        e.preventDefault();
+
+        const formData = Object.fromEntries(new FormData(e.target));
+
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+
+        modal.classList.add("hidden");
+        loadInvoices();
+      };
+    </script>
+  </body>
+</html>
