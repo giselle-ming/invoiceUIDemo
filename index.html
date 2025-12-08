@@ -268,28 +268,20 @@
             (item) => `
           <div class="p-2 bg-gray-50 rounded border">
             ${
-              item.description && item.description !== "Not extracted"
+              item.description
                 ? `<p class="font-medium">${item.description}</p>`
                 : ""
             }
             ${
-              item.part_number && item.part_number !== "Not extracted"
+              item.part_number
                 ? `<p class="text-xs text-gray-600">Part: ${item.part_number}</p>`
                 : ""
             }
             <div class="flex justify-between text-sm mt-1">
+              ${item.quantity ? `<span>Qty: ${item.quantity}</span>` : ""}
+              ${item.unit_price ? `<span>Unit: ${item.unit_price}</span>` : ""}
               ${
-                item.quantity && item.quantity !== "Not extracted"
-                  ? `<span>Qty: ${item.quantity}</span>`
-                  : ""
-              }
-              ${
-                item.unit_price && item.unit_price !== "Not extracted"
-                  ? `<span>Unit: ${item.unit_price}</span>`
-                  : ""
-              }
-              ${
-                item.line_amount && item.line_amount !== "Not extracted"
+                item.line_amount
                   ? `<span class="font-semibold">Ammount: $${item.line_amount}</span>`
                   : ""
               }
